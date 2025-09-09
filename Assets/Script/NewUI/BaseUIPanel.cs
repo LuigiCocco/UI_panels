@@ -8,88 +8,162 @@ public class BaseUIPanel : BaseUI
 {
     [Header("UI Prefabs")]
     public GameObject HeaderPrefab;
-    public List<GameObject> ContentPrefab;
     public GameObject FooterPrefab;
 
-    [Header("Impostazioni Iniziali")]
-    public bool InizializzaAllAvvio = true;
+    [Header("Runtime Content")]
+    public List<GameObject> Content = new List<GameObject>();
+
     [Header("Events")]
     public UnityEvent OnContentFinished;
 
+    private GameObject _headerInstance;
+    private GameObject _footerInstance;
+    private int _currentContentIndex = -1;
+
     private void Start()
     {
-        if (InizializzaAllAvvio)
-        {
-            InstantiateSections();
-        }
-        else
-        {
-            foreach (Transform child in transform)
-            {
-                child.gameObject.SetActive(false);
-            }
-        }
+        InstantiateSections();
     }
 
     public void InstantiateSections()
     {
+
+        _headerInstance = null;
+        _footerInstance = null;
+
         if (HeaderPrefab != null)
         {
-            var header = Instantiate(HeaderPrefab, transform);
-            header.name = "Header";
-            header.SetActive(true);
+            _headerInstance = Instantiate(HeaderPrefab, transform);
+            _headerInstance.name = "Header";
+            _headerInstance.SetActive(true);
         }
 
-        if (ContentPrefab != null)
+        if (Content.Count > 0)
         {
-            foreach (var contentObj in ContentPrefab)
-            {
-                if (contentObj != null)
-                {
-                    var content = Instantiate(contentObj, transform);
-                    content.name = "Content";
-                    content.SetActive(true);
-                }
-            }
+            _currentContentIndex = 0;
+            ShowContentAtIndex(_currentContentIndex);
         }
 
         if (FooterPrefab != null)
         {
-            var footer = Instantiate(FooterPrefab, transform);
-            footer.name = "Footer";
-            footer.SetActive(true);
+            _footerInstance = Instantiate(FooterPrefab, transform);
+            _footerInstance.name = "Footer";
+            _footerInstance.SetActive(true);
         }
     }
 
-    public void LoadContent(GameObject contentPrefab)
+    private void Awake()
     {
-        if (contentPrefab != null)
+        AutoLoadContentsFromChildren();
+    }
+
+    private void AutoLoadContentsFromChildren()
+    {
+        foreach (Transform child in transform)
         {
-            ContentPrefab.Add(contentPrefab);
-            var content = Instantiate(contentPrefab, transform);
+            if (!child.gameObject.activeSelf)
+            {
+                LoadContent(child.gameObject);
+            }
+        }
+    }
+
+    private void ShowContentAtIndex(int index)
+    {
+
+
+        if (index >= 0 && index < Content.Count)
+        {
+            var content = Content[index];
+            content.transform.SetParent(transform, false);
             content.name = "Content";
             content.SetActive(true);
         }
     }
 
+    public void ShowNextContent()
+    {
+        if (Content.Count == 0)
+        {
+            Debug.LogWarning("Nessun contenuto disponibile. Caricalo tramite LoadContent.");
+            return;
+        }
+
+        if (_currentContentIndex < Content.Count - 1)
+        {
+            _currentContentIndex++;
+            ShowContentAtIndex(_currentContentIndex);
+        }
+        else
+        {
+            Debug.Log("Ultimo contenuto raggiunto.");
+            OnContentFinished?.Invoke();
+        }
+    }
+
+    public void ShowPreviousContent()
+    {
+        if (Content.Count == 0)
+        {
+            Debug.LogWarning("Nessun contenuto disponibile.");
+            return;
+        }
+
+        if (_currentContentIndex > 0)
+        {
+            _currentContentIndex--;
+            ShowContentAtIndex(_currentContentIndex);
+        }
+        else
+        {
+            Debug.Log("Sei già al primo contenuto.");
+        }
+    }
+
+    public void LoadContent(GameObject contentInstance)
+    {
+        if (contentInstance == null)
+        {
+            Debug.LogWarning("Content null.");
+            return;
+        }
+
+        contentInstance.SetActive(false);
+        Content.Add(contentInstance);
+
+        if (Content.Count == 1)
+        {
+            _currentContentIndex = 0;
+            ShowContentAtIndex(_currentContentIndex);
+        }
+    }
+
     public void RemoveContent(int index)
     {
-        if (ContentPrefab != null && index >= 0 && index < ContentPrefab.Count)
-        {       
-            int contentInstanceIndex = 0;
+        if (index < 0 || index >= Content.Count) return;
+
+        if (index == _currentContentIndex)
+        {
             foreach (Transform child in transform)
             {
                 if (child.name == "Content")
                 {
-                    if (contentInstanceIndex == index)
-                    {
-                        Destroy(child.gameObject);
-                        break;
-                    }
-                    contentInstanceIndex++;
+                    Destroy(child.gameObject);
+                    break;
                 }
             }
-            ContentPrefab.RemoveAt(index);
+        }
+
+        Content.RemoveAt(index);
+
+        if (_currentContentIndex >= Content.Count)
+        {
+            _currentContentIndex = Content.Count - 1;
+        }
+
+        if (_currentContentIndex >= 0)
+        {
+            ShowContentAtIndex(_currentContentIndex);
         }
     }
 }
