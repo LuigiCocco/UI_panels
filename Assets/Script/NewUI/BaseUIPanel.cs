@@ -18,16 +18,46 @@ public class BaseUIPanel : BaseUI
 
     private GameObject _headerInstance;
     private GameObject _footerInstance;
+    private GameObject _contentContainer;
     private int _currentContentIndex = -1;
+
+    private float contentHeight;
+
+    private void Awake()
+    {
+        FindOrCreateContentContainer();
+        AutoLoadContentsFromChildren();
+    }
 
     private void Start()
     {
         InstantiateSections();
     }
 
+    private void Update()
+    {
+        //LayoutRebuilder.ForceRebuildLayoutImmediate(this.gameObject.GetComponent<RectTransform>());
+    }
+    private void FindOrCreateContentContainer()
+    {
+        Transform existingContent = transform.Find("Content");
+
+        if (existingContent != null)
+        {
+            _contentContainer = existingContent.gameObject;
+            RefreshContent();
+        }
+        else
+        {
+            _contentContainer = new GameObject("Content");
+            _contentContainer.transform.SetParent(transform, false);
+            RectTransform contentRect = _contentContainer.AddComponent<RectTransform>();
+            contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, contentHeight);
+        }
+    }
+
     public void InstantiateSections()
     {
-
         _headerInstance = null;
         _footerInstance = null;
 
@@ -39,6 +69,17 @@ public class BaseUIPanel : BaseUI
             _headerInstance.SetActive(true);
         }
 
+        if (_contentContainer != null)
+        {
+            if (_headerInstance != null)
+            {
+                _contentContainer.transform.SetSiblingIndex(_headerInstance.transform.GetSiblingIndex() + 1);
+            }
+            else
+            {
+                _contentContainer.transform.SetAsFirstSibling();
+            }
+        }
 
         if (FooterPrefab != null)
         {
@@ -51,50 +92,63 @@ public class BaseUIPanel : BaseUI
 
     private void RefreshHeader()
     {
-        _headerInstance.transform.SetAsFirstSibling();
+        if (_headerInstance != null)
+        {
+            _headerInstance.transform.SetAsFirstSibling();
+        }
     }
 
     private void RefreshFooter()
     {
-        _footerInstance.transform.SetAsLastSibling();
+        if (_footerInstance != null)
+        {
+            _footerInstance.transform.SetAsLastSibling();
+        }
     }
 
-    private void Awake()
+    private void RefreshContent()
     {
-        AutoLoadContentsFromChildren();
+        RectTransform contentRect = _contentContainer.GetComponent<RectTransform>();
+        contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, contentHeight);
     }
 
     private void AutoLoadContentsFromChildren()
     {
-        foreach (Transform child in transform)
+        if (_contentContainer == null) return;
+
+        foreach (Transform child in _contentContainer.transform)
         {
             if (!child.gameObject.activeSelf)
             {
-                LoadContent(child.gameObject);
+                LoadContentInternal(child.gameObject);
             }
         }
     }
 
     private void ShowContentAtIndex(int index)
     {
-        foreach (Transform child in transform)
+        if (_contentContainer == null) return;
+
+        // Nasconde tutti i contenuti attivi nel container
+        foreach (Transform child in _contentContainer.transform)
         {
-            if (child.name == "Content" && child.gameObject.activeSelf == true)
+            if (child.gameObject.activeSelf)
             {
                 child.gameObject.SetActive(false);
-                break;
             }
         }
+
+        // Mostra il contenuto all'indice specificato
         if (index >= 0 && index < Content.Count)
         {
             var content = Content[index];
-            if (content.transform.parent != transform)
-            {
-                content.transform.SetParent(transform, false);
-            }
-            content.name = "Content";
+            contentHeight = content.GetComponent<RectTransform>().rect.height;
+            RefreshContent();
             content.SetActive(true);
         }
+        RefreshHeader();
+        RefreshFooter();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(this.gameObject.GetComponent<RectTransform>());
     }
 
     public void ShowNextContent()
@@ -109,8 +163,7 @@ public class BaseUIPanel : BaseUI
         {
             _currentContentIndex++;
             ShowContentAtIndex(_currentContentIndex);
-            RefreshHeader();
-            RefreshFooter();
+            
         }
         else
         {
@@ -148,9 +201,32 @@ public class BaseUIPanel : BaseUI
             return;
         }
 
-        contentInstance.transform.SetParent(transform, false);
+        // Assicura che esista il container Content
+        if (_contentContainer == null)
+        {
+            FindOrCreateContentContainer();
+        }
+
+        // Imposta il parent al container Content
+        contentInstance.transform.SetParent(_contentContainer.transform, false);
+
+        // Configura posizione e stretch totale
+        if (contentInstance.GetComponent<RectTransform>() != null)
+        {
+            RectTransform rect = contentInstance.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0, 1);
+            rect.anchorMax = new Vector2(1, 1);
+            rect.pivot = new Vector2(0.5f, 1);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(0, rect.sizeDelta.y);
+        }
+
         contentInstance.SetActive(false);
-        contentInstance.name = "Content";
+        LoadContentInternal(contentInstance);
+    }
+
+    private void LoadContentInternal(GameObject contentInstance)
+    {
         Content.Add(contentInstance);
 
         if (Content.Count == 1)
@@ -160,24 +236,23 @@ public class BaseUIPanel : BaseUI
         }
     }
 
-
     public void RemoveContent(int index)
     {
         if (index < 0 || index >= Content.Count) return;
 
+        GameObject contentToRemove = Content[index];
+
         if (index == _currentContentIndex)
         {
-            foreach (Transform child in transform)
-            {
-                if (child.name == "Content")
-                {
-                    child.gameObject.SetActive(false); 
-                    break;
-                }
-            }
+            contentToRemove.SetActive(false);
         }
 
         Content.RemoveAt(index);
+
+        if (contentToRemove != null)
+        {
+            DestroyImmediate(contentToRemove);
+        }
 
         if (_currentContentIndex >= Content.Count)
         {
