@@ -35,21 +35,28 @@ public class BaseUIPanel : BaseUI
         {
             _headerInstance = Instantiate(HeaderPrefab, transform);
             _headerInstance.name = "Header";
+            _headerInstance.transform.SetAsFirstSibling();
             _headerInstance.SetActive(true);
         }
 
-        if (Content.Count > 0)
-        {
-            _currentContentIndex = 0;
-            ShowContentAtIndex(_currentContentIndex);
-        }
 
         if (FooterPrefab != null)
         {
             _footerInstance = Instantiate(FooterPrefab, transform);
             _footerInstance.name = "Footer";
+            _footerInstance.transform.SetAsLastSibling();
             _footerInstance.SetActive(true);
         }
+    }
+
+    private void RefreshHeader()
+    {
+        _headerInstance.transform.SetAsFirstSibling();
+    }
+
+    private void RefreshFooter()
+    {
+        _footerInstance.transform.SetAsLastSibling();
     }
 
     private void Awake()
@@ -70,12 +77,21 @@ public class BaseUIPanel : BaseUI
 
     private void ShowContentAtIndex(int index)
     {
-
-
+        foreach (Transform child in transform)
+        {
+            if (child.name == "Content" && child.gameObject.activeSelf == true)
+            {
+                child.gameObject.SetActive(false);
+                break;
+            }
+        }
         if (index >= 0 && index < Content.Count)
         {
             var content = Content[index];
-            content.transform.SetParent(transform, false);
+            if (content.transform.parent != transform)
+            {
+                content.transform.SetParent(transform, false);
+            }
             content.name = "Content";
             content.SetActive(true);
         }
@@ -93,6 +109,8 @@ public class BaseUIPanel : BaseUI
         {
             _currentContentIndex++;
             ShowContentAtIndex(_currentContentIndex);
+            RefreshHeader();
+            RefreshFooter();
         }
         else
         {
@@ -113,6 +131,8 @@ public class BaseUIPanel : BaseUI
         {
             _currentContentIndex--;
             ShowContentAtIndex(_currentContentIndex);
+            RefreshHeader();
+            RefreshFooter();
         }
         else
         {
@@ -128,7 +148,9 @@ public class BaseUIPanel : BaseUI
             return;
         }
 
+        contentInstance.transform.SetParent(transform, false);
         contentInstance.SetActive(false);
+        contentInstance.name = "Content";
         Content.Add(contentInstance);
 
         if (Content.Count == 1)
@@ -137,6 +159,7 @@ public class BaseUIPanel : BaseUI
             ShowContentAtIndex(_currentContentIndex);
         }
     }
+
 
     public void RemoveContent(int index)
     {
@@ -148,7 +171,7 @@ public class BaseUIPanel : BaseUI
             {
                 if (child.name == "Content")
                 {
-                    Destroy(child.gameObject);
+                    child.gameObject.SetActive(false); 
                     break;
                 }
             }
