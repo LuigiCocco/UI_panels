@@ -34,10 +34,6 @@ public class BaseUIPanel : BaseUI
         InstantiateSections();
     }
 
-    private void Update()
-    {
-        //LayoutRebuilder.ForceRebuildLayoutImmediate(this.gameObject.GetComponent<RectTransform>());
-    }
     private void FindOrCreateContentContainer()
     {
         Transform existingContent = transform.Find("Content");
@@ -148,7 +144,6 @@ public class BaseUIPanel : BaseUI
         }
         RefreshHeader();
         RefreshFooter();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(this.gameObject.GetComponent<RectTransform>());
     }
 
     public void ShowNextContent()
@@ -208,22 +203,50 @@ public class BaseUIPanel : BaseUI
         }
 
         // Imposta il parent al container Content
+        FitContentToContainer(contentInstance);
         contentInstance.transform.SetParent(_contentContainer.transform, false);
 
         // Configura posizione e stretch totale
         if (contentInstance.GetComponent<RectTransform>() != null)
         {
             RectTransform rect = contentInstance.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0, 1);
-            rect.anchorMax = new Vector2(1, 1);
-            rect.pivot = new Vector2(0.5f, 1);
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = new Vector2(0, rect.sizeDelta.y);
         }
 
         contentInstance.SetActive(false);
         LoadContentInternal(contentInstance);
     }
+
+    private void FitContentToContainer(GameObject content)
+    {
+        RectTransform containerRect = _contentContainer.GetComponent<RectTransform>();
+        RectTransform contentRect = content.GetComponent<RectTransform>();
+
+        if (containerRect == null || contentRect == null)
+            return;
+
+        // Forza aggiornamento layout
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+
+        // Dimensioni reali del contenuto
+        float contentWidth = contentRect.rect.width;
+        float contentHeight = contentRect.rect.height;
+
+        // Dimensioni fisse del contenitore
+        float containerWidth = containerRect.rect.width;
+        float containerHeight = containerRect.rect.height;
+
+        // Calcola scala per adattarsi mantenendo le proporzioni
+        float widthRatio = containerWidth / contentWidth;
+        float heightRatio = containerHeight / contentHeight;
+        float scale = Mathf.Min(1f, Mathf.Min(widthRatio, heightRatio));
+
+        content.transform.localScale = new Vector3(scale, scale, 1);
+    }
+
 
     private void LoadContentInternal(GameObject contentInstance)
     {
