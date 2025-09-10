@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -6,12 +7,17 @@ using UnityEngine.UI;
 [RequireComponent(typeof(VerticalLayoutGroup))]
 public class BaseUIPanel : BaseUI
 {
+    #region Properties
     [Header("UI Prefabs")]
     public GameObject HeaderPrefab;
     public GameObject FooterPrefab;
 
-    [Header("Runtime Content")]
+    [NonSerialized]
     public List<GameObject> Content = new List<GameObject>();
+
+    [Header("Content Settings")]
+    public float contentHeight;
+    public float contentWidth;
 
     [Header("Events")]
     public UnityEvent OnContentFinished;
@@ -21,7 +27,9 @@ public class BaseUIPanel : BaseUI
     private GameObject _contentContainer;
     private int _currentContentIndex = -1;
 
-    private float contentHeight;
+    #endregion
+
+    #region UnityLifecycle
 
     private void Awake()
     {
@@ -34,6 +42,9 @@ public class BaseUIPanel : BaseUI
         InstantiateSections();
     }
 
+    #endregion
+
+    #region Initialization
     private void FindOrCreateContentContainer()
     {
         Transform existingContent = transform.Find("Content");
@@ -41,7 +52,9 @@ public class BaseUIPanel : BaseUI
         if (existingContent != null)
         {
             _contentContainer = existingContent.gameObject;
-            RefreshContent();
+            RectTransform contentRect = _contentContainer.GetComponent<RectTransform>();
+            contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, contentHeight);
+            contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, contentWidth);
         }
         else
         {
@@ -49,9 +62,25 @@ public class BaseUIPanel : BaseUI
             _contentContainer.transform.SetParent(transform, false);
             RectTransform contentRect = _contentContainer.AddComponent<RectTransform>();
             contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, contentHeight);
+            contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, contentWidth);
         }
     }
 
+    private void AutoLoadContentsFromChildren()
+    {
+        if (_contentContainer == null) return;
+
+        foreach (Transform child in _contentContainer.transform)
+        {
+            if (!child.gameObject.activeSelf)
+            {
+                LoadContentInternal(child.gameObject);
+            }
+        }
+    }
+    #endregion
+
+    #region Layout 
     public void InstantiateSections()
     {
         _headerInstance = null;
@@ -102,25 +131,31 @@ public class BaseUIPanel : BaseUI
         }
     }
 
-    private void RefreshContent()
+    private void FitContentToContainer(GameObject content)
     {
-        RectTransform contentRect = _contentContainer.GetComponent<RectTransform>();
-        contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, contentHeight);
+        RectTransform containerRect = _contentContainer.GetComponent<RectTransform>();
+        RectTransform contentRect = content.GetComponent<RectTransform>();
+
+        if (containerRect == null || contentRect == null)
+            return;
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+
+        float contentWidth = contentRect.rect.width;
+        float contentHeight = contentRect.rect.height;
+
+        float containerWidth = containerRect.rect.width;
+        float containerHeight = containerRect.rect.height;
+
+        float widthRatio = containerWidth / contentWidth;
+        float heightRatio = containerHeight / contentHeight;
+        float scale = Mathf.Min(1f, Mathf.Min(widthRatio, heightRatio));
+
+        content.transform.localScale = new Vector3(scale, scale, 1);
     }
+    #endregion
 
-    private void AutoLoadContentsFromChildren()
-    {
-        if (_contentContainer == null) return;
-
-        foreach (Transform child in _contentContainer.transform)
-        {
-            if (!child.gameObject.activeSelf)
-            {
-                LoadContentInternal(child.gameObject);
-            }
-        }
-    }
-
+    #region Content Navigation
     private void ShowContentAtIndex(int index)
     {
         if (_contentContainer == null) return;
@@ -138,8 +173,6 @@ public class BaseUIPanel : BaseUI
         if (index >= 0 && index < Content.Count)
         {
             var content = Content[index];
-            contentHeight = content.GetComponent<RectTransform>().rect.height;
-            RefreshContent();
             content.SetActive(true);
         }
         RefreshHeader();
@@ -187,7 +220,9 @@ public class BaseUIPanel : BaseUI
             Debug.Log("Sei già al primo contenuto.");
         }
     }
+    #endregion
 
+    #region Content Loading 
     public void LoadContent(GameObject contentInstance)
     {
         if (contentInstance == null)
@@ -219,34 +254,6 @@ public class BaseUIPanel : BaseUI
         contentInstance.SetActive(false);
         LoadContentInternal(contentInstance);
     }
-
-    private void FitContentToContainer(GameObject content)
-    {
-        RectTransform containerRect = _contentContainer.GetComponent<RectTransform>();
-        RectTransform contentRect = content.GetComponent<RectTransform>();
-
-        if (containerRect == null || contentRect == null)
-            return;
-
-        // Forza aggiornamento layout
-        LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
-
-        // Dimensioni reali del contenuto
-        float contentWidth = contentRect.rect.width;
-        float contentHeight = contentRect.rect.height;
-
-        // Dimensioni fisse del contenitore
-        float containerWidth = containerRect.rect.width;
-        float containerHeight = containerRect.rect.height;
-
-        // Calcola scala per adattarsi mantenendo le proporzioni
-        float widthRatio = containerWidth / contentWidth;
-        float heightRatio = containerHeight / contentHeight;
-        float scale = Mathf.Min(1f, Mathf.Min(widthRatio, heightRatio));
-
-        content.transform.localScale = new Vector3(scale, scale, 1);
-    }
-
 
     private void LoadContentInternal(GameObject contentInstance)
     {
@@ -287,4 +294,5 @@ public class BaseUIPanel : BaseUI
             ShowContentAtIndex(_currentContentIndex);
         }
     }
+    #endregion
 }
