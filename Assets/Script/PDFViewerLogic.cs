@@ -4,20 +4,26 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-public class PDFViewerLogic : MonoBehaviour
+public class PDFViewerLogic : BaseUIPanel
 {
     [SerializeField] private PDFAsset pdfAsset; // Seleziona il PDFAsset da Inspector
-    [SerializeField] private RawImage pdfDisplay; // RawImage UI per mostrare la pagina
-    [SerializeField] private Button prevButton; // Bottone "Pagina Precedente"
-    [SerializeField] private Button nextButton; // Bottone "Pagina Successiva"
-    [SerializeField] private TMP_InputField pageInput; // InputField per inserire il numero pagina (1-based)
+    private RawImage _pdfDisplay; // RawImage UI per mostrare la pagina
+    private Button _prevButton; // Bottone "Pagina Precedente"
+    private Button _nextButton; // Bottone "Pagina Successiva"
+    private TMP_InputField _pageInput; // InputField per inserire il numero pagina (1-based)
 
     private PDFDocument pdfDocument; // Il documento PDF caricato
     private int currentPageIndex = 0; // Indice pagina corrente (0-based)
     private int totalPages = 0; // Numero totale pagine
 
+    private void Awake()
+    {
+        AutoBindComponents();
+    }
+
     void Start()
     {
+        _pdfDisplay = Content[0].GetComponent<RawImage>();
         // Carica il PDF dal PDFAsset selezionato in Inspector
         if (pdfAsset == null)
         {
@@ -51,9 +57,9 @@ public class PDFViewerLogic : MonoBehaviour
         }
 
         // Setup listener per i bottoni
-        if (prevButton != null) prevButton.onClick.AddListener(OnPreviousPage);
-        if (nextButton != null) nextButton.onClick.AddListener(OnNextPage);
-        if (pageInput != null) pageInput.onEndEdit.AddListener(OnGoToPage);
+        if (_prevButton != null) _prevButton.onClick.AddListener(OnPreviousPage);
+        if (_nextButton != null) _nextButton.onClick.AddListener(OnNextPage);
+        if (_pageInput != null) _pageInput.onEndEdit.AddListener(OnGoToPage);
 
         // Mostra la prima pagina e aggiorna i bottoni
         RenderPage(currentPageIndex);
@@ -85,11 +91,11 @@ public class PDFViewerLogic : MonoBehaviour
             renderer.RenderPageToExistingTexture(pdfPage, pageTexture);
 
             // Applica al RawImage
-            pdfDisplay.texture = pageTexture;
+            _pdfDisplay.texture = pageTexture;
 
             // Aggiorna UI
             currentPageIndex = pageIndex;
-            if (pageInput != null) pageInput.text = (currentPageIndex + 1).ToString();
+            if (_pageInput != null) _pageInput.text = (currentPageIndex + 1).ToString();
 
             UpdateButtons();
         }
@@ -102,8 +108,8 @@ public class PDFViewerLogic : MonoBehaviour
     // Aggiorna lo stato dei bottoni
     private void UpdateButtons()
     {
-        if (prevButton != null) prevButton.interactable = currentPageIndex > 0;
-        if (nextButton != null) nextButton.interactable = currentPageIndex < totalPages - 1;
+        if (_prevButton != null) _prevButton.interactable = currentPageIndex > 0;
+        if (_nextButton != null) _nextButton.interactable = currentPageIndex < totalPages - 1;
     }
 
     // Logica bottone "Pagina Precedente"
@@ -133,7 +139,7 @@ public class PDFViewerLogic : MonoBehaviour
         }
         else
         {
-            if (pageInput != null) pageInput.text = (currentPageIndex + 1).ToString();
+            if (_pageInput != null) _pageInput.text = (currentPageIndex + 1).ToString();
             Debug.LogWarning("Numero pagina non valido! Deve essere tra 1 e " + totalPages);
         }
     }
@@ -145,6 +151,44 @@ public class PDFViewerLogic : MonoBehaviour
         {
             pdfDocument.Dispose();
             pdfDocument = null;
+        }
+    }
+
+
+
+    private void AutoBindComponents()
+    {
+        // Cerca il pulsante "Precedente/Left"
+        Transform left = transform.Find("Precedente/Left");
+        if (left != null)
+        {
+            _prevButton = left.GetComponent<Button>();
+        }
+        else
+        {
+            Debug.LogWarning("PrevButton (Precedente/Left) non trovato.");
+        }
+
+        // Cerca il pulsante "Successivo/Right"
+        Transform right = transform.Find("Successivo/Right");
+        if (right != null)
+        {
+            _nextButton = right.GetComponent<Button>();
+        }
+        else
+        {
+            Debug.LogWarning("NextButton (Successivo/Right) non trovato.");
+        }
+
+        // Cerca il campo input "Index/Page"
+        Transform page = transform.Find("Index/Page");
+        if (page != null)
+        {
+            _pageInput = page.GetComponent<TMP_InputField>();
+        }
+        else
+        {
+            Debug.LogWarning("PageInput (Index/Page) non trovato.");
         }
     }
 }

@@ -18,6 +18,7 @@ public class BaseUIPanel : BaseUI
     [Header("Content Settings")]
     public float contentHeight;
     public float contentWidth;
+    public bool ok;
 
     [Header("Events")]
     public UnityEvent OnContentFinished;
@@ -40,6 +41,7 @@ public class BaseUIPanel : BaseUI
     private void Start()
     {
         InstantiateSections();
+        ok = true;
     }
 
     #endregion
@@ -238,7 +240,6 @@ public class BaseUIPanel : BaseUI
         }
 
         // Imposta il parent al container Content
-        FitContentToContainer(contentInstance);
         contentInstance.transform.SetParent(_contentContainer.transform, false);
 
         // Configura posizione e stretch totale
@@ -257,6 +258,7 @@ public class BaseUIPanel : BaseUI
 
     private void LoadContentInternal(GameObject contentInstance)
     {
+        FitContentToContainer(contentInstance);
         Content.Add(contentInstance);
 
         if (Content.Count == 1)
