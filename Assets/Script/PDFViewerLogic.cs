@@ -18,12 +18,39 @@ public class PDFViewerLogic : BaseUIPanel
 
     private void Awake()
     {
-        AutoBindComponents();
+        FindOrCreateContentContainer();
+        AutoLoadContentsFromChildren();
+        _pdfDisplay = Content[0].GetComponent<RawImage>();
+    }
+
+    private void AddImageToContent()
+    {
+        // Cerca il figlio chiamato "Content"
+        Transform contentTransform = transform.Find("Content");
+        if (contentTransform != null)
+        {
+            // Prendi il primo figlio di "Content"
+            if (contentTransform.childCount > 0)
+            {
+                GameObject childObject = contentTransform.GetChild(0).gameObject;
+                FitContentToContainer(childObject);
+                Content.Add(childObject);
+            }
+            else
+            {
+                Debug.LogWarning("Il transform 'Content' non ha figli.");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Child 'Content' non trovato nel PDFViewerLogic.");
+        }
     }
 
     void Start()
     {
-        _pdfDisplay = Content[0].GetComponent<RawImage>();
+        InstantiateSections();
+        AutoBindComponents();
         // Carica il PDF dal PDFAsset selezionato in Inspector
         if (pdfAsset == null)
         {
@@ -63,6 +90,7 @@ public class PDFViewerLogic : BaseUIPanel
 
         // Mostra la prima pagina e aggiorna i bottoni
         RenderPage(currentPageIndex);
+        Content[0].SetActive(true);
         UpdateButtons();
     }
 
@@ -159,7 +187,7 @@ public class PDFViewerLogic : BaseUIPanel
     private void AutoBindComponents()
     {
         // Cerca il pulsante "Precedente/Left"
-        Transform left = transform.Find("Precedente/Left");
+        Transform left = transform.Find("Footer/Precedente/Left");
         if (left != null)
         {
             _prevButton = left.GetComponent<Button>();
@@ -170,7 +198,7 @@ public class PDFViewerLogic : BaseUIPanel
         }
 
         // Cerca il pulsante "Successivo/Right"
-        Transform right = transform.Find("Successivo/Right");
+        Transform right = transform.Find("Footer/Successivo/Right");
         if (right != null)
         {
             _nextButton = right.GetComponent<Button>();
@@ -181,7 +209,7 @@ public class PDFViewerLogic : BaseUIPanel
         }
 
         // Cerca il campo input "Index/Page"
-        Transform page = transform.Find("Index/Page");
+        Transform page = transform.Find("Footer/Index/Page");
         if (page != null)
         {
             _pageInput = page.GetComponent<TMP_InputField>();

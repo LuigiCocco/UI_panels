@@ -47,7 +47,7 @@ public class BaseUIPanel : BaseUI
     #endregion
 
     #region Initialization
-    private void FindOrCreateContentContainer()
+    protected void FindOrCreateContentContainer()
     {
         Transform existingContent = transform.Find("Content");
 
@@ -68,7 +68,7 @@ public class BaseUIPanel : BaseUI
         }
     }
 
-    private void AutoLoadContentsFromChildren()
+    protected void AutoLoadContentsFromChildren(bool show = true)
     {
         if (_contentContainer == null) return;
 
@@ -76,7 +76,7 @@ public class BaseUIPanel : BaseUI
         {
             if (!child.gameObject.activeSelf)
             {
-                LoadContentInternal(child.gameObject);
+                LoadContentInternal(child.gameObject,show);
             }
         }
     }
@@ -133,7 +133,7 @@ public class BaseUIPanel : BaseUI
         }
     }
 
-    private void FitContentToContainer(GameObject content)
+    protected void FitContentToContainer(GameObject content)
     {
         RectTransform containerRect = _contentContainer.GetComponent<RectTransform>();
         RectTransform contentRect = content.GetComponent<RectTransform>();
@@ -256,12 +256,12 @@ public class BaseUIPanel : BaseUI
         LoadContentInternal(contentInstance);
     }
 
-    private void LoadContentInternal(GameObject contentInstance)
+    private void LoadContentInternal(GameObject contentInstance,bool show = true)
     {
         FitContentToContainer(contentInstance);
         Content.Add(contentInstance);
 
-        if (Content.Count == 1)
+        if (Content.Count == 1 && show)
         {
             _currentContentIndex = 0;
             ShowContentAtIndex(_currentContentIndex);

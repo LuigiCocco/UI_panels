@@ -669,7 +669,7 @@ GameObject:
   - component: {fileID: 4560579203592342539}
   - component: {fileID: 3115473249716724855}
   m_Layer: 5
-  m_Name: Numero
+  m_Name: Page
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
