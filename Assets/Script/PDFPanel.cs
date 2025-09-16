@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-public class PDFViewerLogic : BaseUIPanel
+public class PDFPanel : BaseUIPanel
 {
     [SerializeField] private PDFAsset pdfAsset; // Seleziona il PDFAsset da Inspector
     private RawImage _pdfDisplay; // RawImage UI per mostrare la pagina
@@ -21,30 +21,6 @@ public class PDFViewerLogic : BaseUIPanel
         FindOrCreateContentContainer();
         AutoLoadContentsFromChildren();
         _pdfDisplay = Content[0].GetComponent<RawImage>();
-    }
-
-    private void AddImageToContent()
-    {
-        // Cerca il figlio chiamato "Content"
-        Transform contentTransform = transform.Find("Content");
-        if (contentTransform != null)
-        {
-            // Prendi il primo figlio di "Content"
-            if (contentTransform.childCount > 0)
-            {
-                GameObject childObject = contentTransform.GetChild(0).gameObject;
-                FitContentToContainer(childObject);
-                Content.Add(childObject);
-            }
-            else
-            {
-                Debug.LogWarning("Il transform 'Content' non ha figli.");
-            }
-        }
-        else
-        {
-            Debug.LogWarning("Child 'Content' non trovato nel PDFViewerLogic.");
-        }
     }
 
     void Start()
